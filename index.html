@@ -128,8 +128,8 @@
   .sec-title{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,3.2vw,2.4rem);letter-spacing:-.02em;margin:0}
   .block{padding:clamp(60px,9vw,110px) 0}
 
-  body.js-reveal .reveal{opacity:0;transform:translateY(28px)}
-  body.js-reveal .reveal.in{opacity:1;transform:none;transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  body.js-reveal .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  body.js-reveal .reveal.in{opacity:1;transform:none}
 
   /* ---------- Hero ---------- */
   .hero{min-height:100vh;display:flex;align-items:center;padding-top:90px;position:relative;overflow:hidden;isolation:isolate}
@@ -664,7 +664,11 @@
   function revealNow(){
     var vh=window.innerHeight||document.documentElement.clientHeight;
     document.querySelectorAll(".reveal:not(.in)").forEach(function(n){
-      if(n.getBoundingClientRect().top < vh*0.90) n.classList.add("in");
+      if(n.getBoundingClientRect().top < vh*0.92){
+        n.classList.add("in");
+        /* fail-safe: guarantee visibility even if the CSS transition was paused (e.g. background tab) */
+        setTimeout(function(){ n.style.opacity="1"; n.style.transform="none"; },900);
+      }
     });
   }
   if(!reduce){
@@ -673,6 +677,7 @@
     function onRevealScroll(){ if(!revTick){revTick=true;requestAnimationFrame(function(){revealNow();revTick=false;});} }
     window.addEventListener("scroll",onRevealScroll,{passive:true});
     window.addEventListener("resize",onRevealScroll,{passive:true});
+    document.addEventListener("visibilitychange",function(){ if(!document.hidden) revealNow(); });
     revealNow();
   }
   /* Nav / in-page links: reveal the target as the smooth-scroll brings it into view. */
