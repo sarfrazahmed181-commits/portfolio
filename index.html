@@ -657,28 +657,38 @@
   navlinks.querySelectorAll("a").forEach(function(a){a.addEventListener("click",function(){navlinks.classList.remove("open");menuBtn.setAttribute("aria-expanded","false");});});
 
   var reduce=window.matchMedia("(prefers-reduced-motion:reduce)").matches;
-  if(!reduce&&"IntersectionObserver" in window){
-    document.body.classList.add("js-reveal");
-    var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){en.target.classList.add("in");io.unobserve(en.target);}});},{threshold:0,rootMargin:"0px 0px -8% 0px"});
-    document.querySelectorAll(".reveal").forEach(function(n){io.observe(n);});
+  /* ----- Robust reveal: only reveal elements while they are IN VIEW (being painted), so the
+     opacity transition never gets stuck at 0 — which happens if ".in" is set on an off-screen
+     element. This replaces the IntersectionObserver + off-screen force-reveal that caused
+     sections to stay invisible on nav-click. ----- */
+  function revealNow(){
+    var vh=window.innerHeight||document.documentElement.clientHeight;
+    document.querySelectorAll(".reveal:not(.in)").forEach(function(n){
+      if(n.getBoundingClientRect().top < vh*0.90) n.classList.add("in");
+    });
   }
-
-  /* ----- Nav / in-page link click → instantly reveal that section (no manual scroll) ----- */
-  function revealSection(sec){ if(!sec)return; if(sec.classList.contains("reveal"))sec.classList.add("in"); sec.querySelectorAll(".reveal").forEach(function(n){n.classList.add("in");}); }
+  if(!reduce){
+    document.body.classList.add("js-reveal");
+    var revTick=false;
+    function onRevealScroll(){ if(!revTick){revTick=true;requestAnimationFrame(function(){revealNow();revTick=false;});} }
+    window.addEventListener("scroll",onRevealScroll,{passive:true});
+    window.addEventListener("resize",onRevealScroll,{passive:true});
+    revealNow();
+  }
+  /* Nav / in-page links: reveal the target as the smooth-scroll brings it into view. */
   document.querySelectorAll('.navlinks a[href^="#"], .hero-actions a[href^="#"]').forEach(function(a){
-    a.addEventListener("click",function(){ revealSection(document.querySelector(a.getAttribute("href"))); });
+    a.addEventListener("click",function(){ setTimeout(revealNow,120); setTimeout(revealNow,650); });
   });
 
   /* ----- SARFRAZ gate: enter + polished cinematic return ----- */
   document.body.classList.add("gated");
   var gate=document.getElementById("gate"),enter=document.getElementById("enterBtn"),logo=document.querySelector("header#nav .logo");
-  function revealInView(){document.querySelectorAll(".reveal:not(.in)").forEach(function(n){if(n.getBoundingClientRect().top<window.innerHeight*0.94)n.classList.add("in");});}
   function enterSite(){
     if(!document.body.classList.contains("gated"))return;
     gate.classList.add("hide");
     document.body.classList.remove("gated");
     document.body.style.overflow="";
-    revealInView();
+    setTimeout(revealNow,60);setTimeout(revealNow,420);
     setTimeout(function(){ if(gate.classList.contains("hide"))gate.style.display="none"; },760);
   }
   function replayLetters(){gate.querySelectorAll(".gate-word span").forEach(function(s){s.style.animation="none";void s.offsetWidth;s.style.animation="";});}
